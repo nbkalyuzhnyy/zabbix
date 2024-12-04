@@ -1,0 +1,489 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<zabbix_export>
+    <version>5.0</version>
+    <date>2021-10-14T09:14:54Z</date>
+    <groups>
+        <group>
+            <name>Web</name>
+        </group>
+    </groups>
+    <templates>
+        <template>
+            <template>SSL check</template>
+            <name>SSL check</name>
+            <description>Проверка сертификатов</description>
+            <groups>
+                <group>
+                    <name>Web</name>
+                </group>
+            </groups>
+            <applications>
+                <application>
+                    <name>SSL</name>
+                </application>
+            </applications>
+            <items>
+                <item>
+                    <name>SSL domain list</name>
+                    <key>ssl.check</key>
+                    <delay>{$SSL_DISCOVERY_PERIOD}</delay>
+                    <history>{$SSL_HISTORY_PERIOD}</history>
+                    <trends>0</trends>
+                    <value_type>TEXT</value_type>
+                    <applications>
+                        <application>
+                            <name>SSL</name>
+                        </application>
+                    </applications>
+                    <preprocessing>
+                        <step>
+                            <type>JAVASCRIPT</type>
+                            <params>var DomainList = { 
+&quot;data&quot;: [
+  {
+    &quot;{#NAME}&quot;: &quot;SSL internet-lab.ru&quot;,
+    &quot;{#DOMAIN}&quot;: &quot;internet-lab.ru&quot;,
+    &quot;{#SERVER}&quot;: &quot;&quot;,
+    &quot;{#PORT}&quot;: 443,
+    &quot;{#TYPE}&quot;: &quot;web&quot;
+  },
+  {
+    &quot;{#NAME}&quot;: &quot;FTP SSL Intel&quot;,
+    &quot;{#DOMAIN}&quot;: &quot;ftp.intel.com&quot;,
+    &quot;{#SERVER}&quot;: &quot;&quot;,
+    &quot;{#PORT}&quot;: &quot;21&quot;,
+    &quot;{#TYPE}&quot;: &quot;ftp&quot;
+  },
+  {
+    &quot;{#NAME}&quot;: &quot;SSL испытание.рф&quot;,
+    &quot;{#DOMAIN}&quot;: &quot;испытание.рф&quot;,
+    &quot;{#SERVER}&quot;: &quot;&quot;,
+    &quot;{#PORT}&quot;: &quot;&quot;,
+    &quot;{#TYPE}&quot;: &quot;&quot;
+  }
+] };
+return JSON.stringify(DomainList)</params>
+                        </step>
+                    </preprocessing>
+                </item>
+            </items>
+            <discovery_rules>
+                <discovery_rule>
+                    <name>Domain discovery</name>
+                    <type>DEPENDENT</type>
+                    <key>ssl.domain.discovery</key>
+                    <delay>0</delay>
+                    <item_prototypes>
+                        <item_prototype>
+                            <name>{#NAME} signature algorithm</name>
+                            <type>DEPENDENT</type>
+                            <key>ssl.check.algorithm[&quot;{#NAME}&quot;]</key>
+                            <delay>0</delay>
+                            <history>{$SSL_HISTORY_PERIOD}</history>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
+                            <applications>
+                                <application>
+                                    <name>SSL</name>
+                                </application>
+                            </applications>
+                            <preprocessing>
+                                <step>
+                                    <type>JSONPATH</type>
+                                    <params>$['data'][0]['signature algorithm']</params>
+                                </step>
+                            </preprocessing>
+                            <master_item>
+                                <key>ssl.check[&quot;{#NAME}&quot;,&quot;{#DOMAIN}&quot;,&quot;{#SERVER}&quot;,&quot;{#PORT}&quot;,&quot;{#TYPE}&quot;]</key>
+                            </master_item>
+                        </item_prototype>
+                        <item_prototype>
+                            <name>{#NAME} alternative name</name>
+                            <type>DEPENDENT</type>
+                            <key>ssl.check.alt[&quot;{#NAME}&quot;]</key>
+                            <delay>0</delay>
+                            <history>{$SSL_HISTORY_PERIOD}</history>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
+                            <applications>
+                                <application>
+                                    <name>SSL</name>
+                                </application>
+                            </applications>
+                            <preprocessing>
+                                <step>
+                                    <type>JSONPATH</type>
+                                    <params>$['data'][0]['alternative name']</params>
+                                </step>
+                            </preprocessing>
+                            <master_item>
+                                <key>ssl.check[&quot;{#NAME}&quot;,&quot;{#DOMAIN}&quot;,&quot;{#SERVER}&quot;,&quot;{#PORT}&quot;,&quot;{#TYPE}&quot;]</key>
+                            </master_item>
+                        </item_prototype>
+                        <item_prototype>
+                            <name>{#NAME} days</name>
+                            <type>DEPENDENT</type>
+                            <key>ssl.check.days[&quot;{#NAME}&quot;]</key>
+                            <delay>0</delay>
+                            <history>{$SSL_HISTORY_PERIOD}</history>
+                            <trends>{$SSL_TREND_PERIOD}</trends>
+                            <value_type>FLOAT</value_type>
+                            <units>d</units>
+                            <applications>
+                                <application>
+                                    <name>SSL</name>
+                                </application>
+                            </applications>
+                            <preprocessing>
+                                <step>
+                                    <type>JSONPATH</type>
+                                    <params>$['data'][0]['days']</params>
+                                </step>
+                            </preprocessing>
+                            <master_item>
+                                <key>ssl.check[&quot;{#NAME}&quot;,&quot;{#DOMAIN}&quot;,&quot;{#SERVER}&quot;,&quot;{#PORT}&quot;,&quot;{#TYPE}&quot;]</key>
+                            </master_item>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <expression>{last(#1)}&lt;0</expression>
+                                    <name>{#NAME} expired</name>
+                                    <priority>HIGH</priority>
+                                </trigger_prototype>
+                                <trigger_prototype>
+                                    <expression>{last(#1)}&lt;1</expression>
+                                    <name>{#NAME} expires today</name>
+                                    <priority>HIGH</priority>
+                                    <dependencies>
+                                        <dependency>
+                                            <name>{#NAME} expired</name>
+                                            <expression>{SSL check:ssl.check.days[&quot;{#NAME}&quot;].last(#1)}&lt;0</expression>
+                                        </dependency>
+                                    </dependencies>
+                                </trigger_prototype>
+                                <trigger_prototype>
+                                    <expression>{last(#1)}&lt;8</expression>
+                                    <name>{#NAME} will expire: {ITEM.LASTVALUE}</name>
+                                    <priority>HIGH</priority>
+                                    <dependencies>
+                                        <dependency>
+                                            <name>{#NAME} expires today</name>
+                                            <expression>{SSL check:ssl.check.days[&quot;{#NAME}&quot;].last(#1)}&lt;1</expression>
+                                        </dependency>
+                                    </dependencies>
+                                </trigger_prototype>
+                                <trigger_prototype>
+                                    <expression>{last(#1)}&lt;15</expression>
+                                    <name>{#NAME} will expire: {ITEM.LASTVALUE}</name>
+                                    <priority>AVERAGE</priority>
+                                    <dependencies>
+                                        <dependency>
+                                            <name>{#NAME} will expire: {ITEM.LASTVALUE}</name>
+                                            <expression>{SSL check:ssl.check.days[&quot;{#NAME}&quot;].last(#1)}&lt;8</expression>
+                                        </dependency>
+                                    </dependencies>
+                                </trigger_prototype>
+                                <trigger_prototype>
+                                    <expression>{last(#1)}&lt;31</expression>
+                                    <name>{#NAME} will expire: {ITEM.LASTVALUE}</name>
+                                    <priority>WARNING</priority>
+                                    <dependencies>
+                                        <dependency>
+                                            <name>{#NAME} will expire: {ITEM.LASTVALUE}</name>
+                                            <expression>{SSL check:ssl.check.days[&quot;{#NAME}&quot;].last(#1)}&lt;15</expression>
+                                        </dependency>
+                                    </dependencies>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <name>{#NAME} email</name>
+                            <type>DEPENDENT</type>
+                            <key>ssl.check.email[&quot;{#NAME}&quot;]</key>
+                            <delay>0</delay>
+                            <history>{$SSL_HISTORY_PERIOD}</history>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
+                            <applications>
+                                <application>
+                                    <name>SSL</name>
+                                </application>
+                            </applications>
+                            <preprocessing>
+                                <step>
+                                    <type>JSONPATH</type>
+                                    <params>$['data'][0]['email']</params>
+                                </step>
+                            </preprocessing>
+                            <master_item>
+                                <key>ssl.check[&quot;{#NAME}&quot;,&quot;{#DOMAIN}&quot;,&quot;{#SERVER}&quot;,&quot;{#PORT}&quot;,&quot;{#TYPE}&quot;]</key>
+                            </master_item>
+                        </item_prototype>
+                        <item_prototype>
+                            <name>{#NAME} SHA1 fingerprint</name>
+                            <type>DEPENDENT</type>
+                            <key>ssl.check.fingerprint[&quot;{#NAME}&quot;]</key>
+                            <delay>0</delay>
+                            <history>{$SSL_HISTORY_PERIOD}</history>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
+                            <applications>
+                                <application>
+                                    <name>SSL</name>
+                                </application>
+                            </applications>
+                            <preprocessing>
+                                <step>
+                                    <type>JSONPATH</type>
+                                    <params>$['data'][0]['fingerprint']</params>
+                                </step>
+                            </preprocessing>
+                            <master_item>
+                                <key>ssl.check[&quot;{#NAME}&quot;,&quot;{#DOMAIN}&quot;,&quot;{#SERVER}&quot;,&quot;{#PORT}&quot;,&quot;{#TYPE}&quot;]</key>
+                            </master_item>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <expression>{diff()}=1 and {strlen()}&gt;0</expression>
+                                    <name>{#NAME} fingerprint was changed</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <name>{#NAME} issuer</name>
+                            <type>DEPENDENT</type>
+                            <key>ssl.check.issuer[&quot;{#NAME}&quot;]</key>
+                            <delay>0</delay>
+                            <history>{$SSL_HISTORY_PERIOD}</history>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
+                            <applications>
+                                <application>
+                                    <name>SSL</name>
+                                </application>
+                            </applications>
+                            <preprocessing>
+                                <step>
+                                    <type>JSONPATH</type>
+                                    <params>$['data'][0]['issuer']</params>
+                                </step>
+                            </preprocessing>
+                            <master_item>
+                                <key>ssl.check[&quot;{#NAME}&quot;,&quot;{#DOMAIN}&quot;,&quot;{#SERVER}&quot;,&quot;{#PORT}&quot;,&quot;{#TYPE}&quot;]</key>
+                            </master_item>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <expression>{diff()}=1 and {strlen()}&gt;0</expression>
+                                    <name>{#NAME} issuer was changed</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <name>{#NAME} notAfter</name>
+                            <type>DEPENDENT</type>
+                            <key>ssl.check.notAfter[&quot;{#NAME}&quot;]</key>
+                            <delay>0</delay>
+                            <history>{$SSL_HISTORY_PERIOD}</history>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
+                            <applications>
+                                <application>
+                                    <name>SSL</name>
+                                </application>
+                            </applications>
+                            <preprocessing>
+                                <step>
+                                    <type>JSONPATH</type>
+                                    <params>$['data'][0]['notAfter']</params>
+                                </step>
+                            </preprocessing>
+                            <master_item>
+                                <key>ssl.check[&quot;{#NAME}&quot;,&quot;{#DOMAIN}&quot;,&quot;{#SERVER}&quot;,&quot;{#PORT}&quot;,&quot;{#TYPE}&quot;]</key>
+                            </master_item>
+                        </item_prototype>
+                        <item_prototype>
+                            <name>{#NAME} notBefore</name>
+                            <type>DEPENDENT</type>
+                            <key>ssl.check.notBefore[&quot;{#NAME}&quot;]</key>
+                            <delay>0</delay>
+                            <history>{$SSL_HISTORY_PERIOD}</history>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
+                            <applications>
+                                <application>
+                                    <name>SSL</name>
+                                </application>
+                            </applications>
+                            <preprocessing>
+                                <step>
+                                    <type>JSONPATH</type>
+                                    <params>$['data'][0]['notBefore']</params>
+                                </step>
+                            </preprocessing>
+                            <master_item>
+                                <key>ssl.check[&quot;{#NAME}&quot;,&quot;{#DOMAIN}&quot;,&quot;{#SERVER}&quot;,&quot;{#PORT}&quot;,&quot;{#TYPE}&quot;]</key>
+                            </master_item>
+                        </item_prototype>
+                        <item_prototype>
+                            <name>{#NAME} public key algorithm</name>
+                            <type>DEPENDENT</type>
+                            <key>ssl.check.pubalgorithm[&quot;{#NAME}&quot;]</key>
+                            <delay>0</delay>
+                            <history>{$SSL_HISTORY_PERIOD}</history>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
+                            <applications>
+                                <application>
+                                    <name>SSL</name>
+                                </application>
+                            </applications>
+                            <preprocessing>
+                                <step>
+                                    <type>JSONPATH</type>
+                                    <params>$['data'][0]['public key algorithm']</params>
+                                </step>
+                            </preprocessing>
+                            <master_item>
+                                <key>ssl.check[&quot;{#NAME}&quot;,&quot;{#DOMAIN}&quot;,&quot;{#SERVER}&quot;,&quot;{#PORT}&quot;,&quot;{#TYPE}&quot;]</key>
+                            </master_item>
+                        </item_prototype>
+                        <item_prototype>
+                            <name>{#NAME} serial</name>
+                            <type>DEPENDENT</type>
+                            <key>ssl.check.serial[&quot;{#NAME}&quot;]</key>
+                            <delay>0</delay>
+                            <history>{$SSL_HISTORY_PERIOD}</history>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
+                            <applications>
+                                <application>
+                                    <name>SSL</name>
+                                </application>
+                            </applications>
+                            <preprocessing>
+                                <step>
+                                    <type>JSONPATH</type>
+                                    <params>$['data'][0]['serial']</params>
+                                </step>
+                            </preprocessing>
+                            <master_item>
+                                <key>ssl.check[&quot;{#NAME}&quot;,&quot;{#DOMAIN}&quot;,&quot;{#SERVER}&quot;,&quot;{#PORT}&quot;,&quot;{#TYPE}&quot;]</key>
+                            </master_item>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <expression>{diff()}=1 and {strlen()}&gt;0</expression>
+                                    <name>{#NAME} serial was changed</name>
+                                    <priority>WARNING</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <name>{#NAME} subject</name>
+                            <type>DEPENDENT</type>
+                            <key>ssl.check.subject[&quot;{#NAME}&quot;]</key>
+                            <delay>0</delay>
+                            <history>{$SSL_HISTORY_PERIOD}</history>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
+                            <applications>
+                                <application>
+                                    <name>SSL</name>
+                                </application>
+                            </applications>
+                            <preprocessing>
+                                <step>
+                                    <type>JSONPATH</type>
+                                    <params>$['data'][0]['subject']</params>
+                                </step>
+                            </preprocessing>
+                            <master_item>
+                                <key>ssl.check[&quot;{#NAME}&quot;,&quot;{#DOMAIN}&quot;,&quot;{#SERVER}&quot;,&quot;{#PORT}&quot;,&quot;{#TYPE}&quot;]</key>
+                            </master_item>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <expression>{diff()}=1 and {strlen()}&gt;0</expression>
+                                    <name>{#NAME} subject was changed</name>
+                                    <priority>INFO</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                        <item_prototype>
+                            <name>{#NAME} version</name>
+                            <type>DEPENDENT</type>
+                            <key>ssl.check.version[&quot;{#NAME}&quot;]</key>
+                            <delay>0</delay>
+                            <history>{$SSL_HISTORY_PERIOD}</history>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
+                            <applications>
+                                <application>
+                                    <name>SSL</name>
+                                </application>
+                            </applications>
+                            <preprocessing>
+                                <step>
+                                    <type>JSONPATH</type>
+                                    <params>$['data'][0]['version']</params>
+                                </step>
+                            </preprocessing>
+                            <master_item>
+                                <key>ssl.check[&quot;{#NAME}&quot;,&quot;{#DOMAIN}&quot;,&quot;{#SERVER}&quot;,&quot;{#PORT}&quot;,&quot;{#TYPE}&quot;]</key>
+                            </master_item>
+                        </item_prototype>
+                        <item_prototype>
+                            <name>{#NAME} info</name>
+                            <key>ssl.check[&quot;{#NAME}&quot;,&quot;{#DOMAIN}&quot;,&quot;{#SERVER}&quot;,&quot;{#PORT}&quot;,&quot;{#TYPE}&quot;]</key>
+                            <delay>{$SSL_REQUEST_PERIOD}</delay>
+                            <history>{$SSL_HISTORY_PERIOD}</history>
+                            <trends>0</trends>
+                            <value_type>TEXT</value_type>
+                            <applications>
+                                <application>
+                                    <name>SSL</name>
+                                </application>
+                            </applications>
+                            <preprocessing>
+                                <step>
+                                    <type>CHECK_JSON_ERROR</type>
+                                    <params>$['data'][0]['error']</params>
+                                </step>
+                            </preprocessing>
+                            <trigger_prototypes>
+                                <trigger_prototype>
+                                    <expression>{nodata({$SSL_NODATA_PERIOD})}=1</expression>
+                                    <name>{#NAME} has no data</name>
+                                    <priority>HIGH</priority>
+                                </trigger_prototype>
+                            </trigger_prototypes>
+                        </item_prototype>
+                    </item_prototypes>
+                    <master_item>
+                        <key>ssl.check</key>
+                    </master_item>
+                </discovery_rule>
+            </discovery_rules>
+            <macros>
+                <macro>
+                    <macro>{$SSL_DISCOVERY_PERIOD}</macro>
+                    <value>1h</value>
+                </macro>
+                <macro>
+                    <macro>{$SSL_HISTORY_PERIOD}</macro>
+                    <value>180d</value>
+                </macro>
+                <macro>
+                    <macro>{$SSL_NODATA_PERIOD}</macro>
+                    <value>1d</value>
+                </macro>
+                <macro>
+                    <macro>{$SSL_REQUEST_PERIOD}</macro>
+                    <value>6h</value>
+                </macro>
+                <macro>
+                    <macro>{$SSL_TREND_PERIOD}</macro>
+                    <value>180d</value>
+                </macro>
+            </macros>
+        </template>
+    </templates>
+</zabbix_export>
